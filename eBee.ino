@@ -1,8 +1,8 @@
 #include <HX711.h> 0996838149
 #include <DHT.h>
 #include <LiquidCrystal_I2C.h>
-#include <GSM.h>
 #include <ArduinoJson.h>
+#include <Http.h>
 
 #define DELAY_TIME 10000
 
@@ -15,18 +15,10 @@
 #define CLK 3 //load cell SCK pin
 
 // GSM pins and other values
-#define PINNUMBER "" // PIN of sim card
-#define GPRS_APN "internet.ht.hr"
-#define GPRS_LOGIN ""
-#define GPRS_PASSWORD ""
-
-// Variables for GSM
-GSMClient client;
-GPRS gprs;
-GSM gsmAccess;
-GSM_SMS sms;
-
-char url[] = "https://localhost:44312"; // ovo treba zamjeniti sa URL-om stanice kad se podigne
+const char BEARER[] PROGMEM = "internet.ht.hr";
+#define RST_PIN 8
+#define RX_PIN 10
+#define TX_PIN 9
 
 // DHT sensor variables
 DHT dht(DHTPIN, DHTTYPE);
@@ -56,10 +48,6 @@ String sensorId = "";
 void setup() {
   Serial.begin(9600); 
 
-  // initialize the GSM module 
-  // connected the GSM to the internet (ISP - A1, HT, Tele2 etc.)
-  beginGsm();
-
   // now send a POST request to get SensorId
   while(sensorId.length() <= 0){
     sensorId = postSensor();
@@ -68,6 +56,10 @@ void setup() {
       delay(10000); // wait for 10 seconds before sending another POST request
     }
   }
+  
+  // terminate the connection
+  disconnectHttp(http);
+  
   // display sensor id
   showSensorId();
   delay(60000); // show sensor Id for the next 60 seconds (better implement switch by button)
@@ -122,13 +114,11 @@ void loop()
   showReadings(doc["Weight"], doc["Temperature"], doc["Humidity"]);
 
   // turn off components to preserve power
-  shutdownGsm();
   scale.power_down();
 
   // sleep time - power down before doing another sensor reading and posting to database
   delay(DELAY_TIME);
 
-  beginGsm();
   scale.power_up();
 }
 
@@ -144,55 +134,38 @@ float readWeight()
 }
 
 // funkcije za GSM i komunikaciju s web servisom
-void beginGsm()
+HTTP connectHttp()
 {
-  Serial.println("Starting Arduino web client");
-  boolean connected = true;
-  while(connected){
-      if((gsmAccess.begin(PINNUMBER)==GSM_READY)&&
-          (gprs.attachGPRS(GPRS_APN, GPRS_LOGIN, GPRS_PASSWORD)==GPRS_READY)){
-            connected = false;}
-      else{
-          Serial.println("Not connected.");
-          delay(1000);
-      }
-  }
-  Serial.println("GSM initialized"); 
+  HTTP http(9600, RX_PIN, TX_PIN, RST_PIN);
+  result = http.connect(BEARER);
+  Serial.print(F("HTTP connect: "));
+  // result bi trebo biti 200, što znači da se spojilo
+  Serial.println(result);
+
+  return http;
 }
 
-void shutdownGsm()
+void disconnectHttp(HTTP http)
 {
-  gsmAccess.shutdown();
+  Serial.print(F("HTTP disconnect: "));
+  Serial.print(http.disconnect());
 }
 
-void postSensorData(String data)
+void postSensorData(String body)
 {
-  if (client.connect(url,80)) {
-    Serial.println("Connecting...");
-    client.println("POST /api/SensorData HTTP/1.1"); // request and route
-    client.print("Host: "); // the Host path
-    client.println(url);
-    client.println("Connection: close");
-    client.println("Content-Type: application/json");
-    client.print("Content-Length: ");
-    client.println(data.length());
-    client.println();
-    client.println(data);
-    }
-  else {
-    Serial.println("Connection failed.");
-    Serial.println();
-    Serial.println("Disconnecting.");
-    client.stop();
+  HTTP http = connectHttp();
+  
+  char response[58];
+  result = http.post("https://iotebee.azurewebsites.net/api/SensorData", body, response);
+  Serial.print(F("HTTP POST: "));
+  Serial.println(result);
+  if (result == SUCCESS)
+  {
+    Serial.println(response);
   }
-
-  boolean status = checkStatusOk();
-  if(!status){
-    Serial.println("Failed to POST sensor data to service database.");
-  }
-
-  Serial.println("Succeeded in POSTing sensor data.");
-  client.stop();
+  
+  disconnectHttp(http);
+  return;
 }
 
 // sends a post request which will add this sensor to the Sensor Database Table and return the Id of the sensor
@@ -200,80 +173,35 @@ void postSensorData(String data)
 // the Id should be displayed on the LCD screen
 String postSensor()
 {
-  // send POST request for SensorId to web service
-  if (client.connect(url,80)) {
-    Serial.println("Connecting...");
-    client.println("POST /api/Sensor HTTP/1.1"); // request and route
-    client.print("Host: "); // the Host path
-    client.println(url);
-    client.println("Connection: close"); // ili keep-alive
-    client.println("Content-Type: application/json");
-    client.println("Content-Length: 0");
-    }
-  else {
-    Serial.println("Connection failed.");
-    Serial.println();
-    Serial.println("Disconnecting.");
-    client.stop();
-  }
-
-  // read the response step by step (3 steps)
-  // 1. Check HTTP status
-  boolean status = checkStatusOk();
-  if(!status){
-    return "";
-  }
-
-  // 2. Skip HTTP headers
-  buffer = "";
-  while(client.available() || client.connected()) // available vraća broj bitova dostupnih za čitanje
+  HTTP http = connectHttp();
+  
+  char response[58]; // očekujemo 58 charactera da dobijemo nazad od servera
+  String body = ""
+  result = http.post("https://iotebee.azurewebsites.net/api/Sensor", body, response);
+  Serial.print(F("HTTP POST: "));
+  Serial.println(result);
+  if (result == SUCCESS)
   {
-    // read one character from buffer
-    char c = client.read();
-    buffer += c;
-    Serial.print(c);
-    
-    if(buffer.indexOf("\r\n\r\n") > 0)
-    {
-      break;
-    }
-  }
+    Serial.println(response);
+    StaticJsonBuffer<58> jsonBuffer;
+    JsonObject &root = jsonBuffer.parseObject(response);
 
+    String id = root[F("SensorId")];
+    Serial.print(F("ID: "));
+    Serial.println(id);
+
+    disconnectHttp(http);
+    return id;
+  }
+  
+  disconnectHttp(http);
+  return ""
   // 3. Read the Json response containing the SensorId and deserialize the json
-  const size_t capacity = JSON_OBJECT_SIZE(1) + 60;
-  DynamicJsonDocument doc(capacity);
+  //const size_t capacity = JSON_OBJECT_SIZE(1) + 60;
+  //DynamicJsonDocument doc(capacity);
   
-  deserializeJson(doc, client);
-  client.stop(); // stop client connection, we don't need it anymore
+  //deserializeJson(doc, client);
   
-  return doc["SensorId"];
-}
-
-bool checkStatusOk()
-{
-  String buffer = "";
-  while(client.available() || client.connected()) // available vraća broj bitova dostupnih za čitanje
-  {
-    // read one character from buffer
-    char c = client.read();
-    buffer += c;
-    Serial.print(c);
-    
-    // check if we reached carriage return
-    // if we did then check if we have recieve 200 OK status
-    if(c == '\r'){
-      if (buffer.indexOf("HTTP/1.1 200 OK") > 0) {
-        Serial.print("Unexpected response: ");
-        Serial.println(buffer);
-        return false;
-      }
-
-      return true;
-    }
-  }
-
-  Serial.println("Could not find the request status or response wasn't recieved might want to add delay (of 1 or more seconds) before while loop.");
-  return false;
 }
 
 // funkcije za prikaz na LCD-u
