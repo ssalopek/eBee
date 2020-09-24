@@ -104,7 +104,7 @@ void loop()
     return;
   }
 
-  String sensorData = "";
+  char sensorData[256];
   serializeJson(doc, sensorData);
   
   // send Post request to Sensor api route
@@ -151,7 +151,7 @@ void disconnectHttp(HTTP http)
   Serial.print(http.disconnect());
 }
 
-void postSensorData(String body)
+void postSensorData(char* body)
 {
   HTTP http = connectHttp();
   
