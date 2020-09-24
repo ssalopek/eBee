@@ -57,9 +57,6 @@ void setup() {
     }
   }
   
-  // terminate the connection
-  disconnectHttp(http);
-  
   // display sensor id
   showSensorId();
   delay(60000); // show sensor Id for the next 60 seconds (better implement switch by button)
@@ -134,14 +131,25 @@ float readWeight()
 }
 
 // funkcije za GSM i komunikaciju s web servisom
-HTTP connectHttp()
+HTTP connectHttp(int *success)
 {
   HTTP http(9600, RX_PIN, TX_PIN, RST_PIN);
   result = http.connect(BEARER);
   Serial.print(F("HTTP connect: "));
-  // result bi trebo biti 200, što znači da se spojilo
-  Serial.println(result);
-
+  Serial.println(result); // result bi trebo biti 0 što znači SUCCESS po njegovim Enumima
+	
+  if (result == SUCCESS)
+  {
+    Serial.println(response);
+  	*success = 0;
+  }
+  else
+  {
+	Serial.println(F("Failed to connect."));
+	*success = 1;
+  	delay(1000);
+  }
+	
   return http;
 }
 
@@ -153,7 +161,11 @@ void disconnectHttp(HTTP http)
 
 void postSensorData(char* body)
 {
-  HTTP http = connectHttp();
+  int success = 1;
+  do
+  {
+  	HTTP http = connectHttp(&success);
+  }while(success == 1);
   
   char response[58];
   result = http.post("https://iotebee.azurewebsites.net/api/SensorData", body, response);
@@ -173,10 +185,15 @@ void postSensorData(char* body)
 // the Id should be displayed on the LCD screen
 String postSensor()
 {
-  HTTP http = connectHttp();
+  	
+  int success = 1;
+  do
+  {
+  	HTTP http = connectHttp(&success);
+  }while(success == 1);
   
   char response[58]; // očekujemo 58 charactera da dobijemo nazad od servera
-  String body = ""
+  const char* body = "";
   result = http.post("https://iotebee.azurewebsites.net/api/Sensor", body, response);
   Serial.print(F("HTTP POST: "));
   Serial.println(result);
