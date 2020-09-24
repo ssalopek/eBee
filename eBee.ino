@@ -155,6 +155,12 @@ void setupModule() {
   }
   Serial.println(F("Setup Complete!"));
 
+  // Print version
+  Serial.print("Module ");
+  Serial.println(sim800l->getVersion());
+  Serial.print("Firmware ");
+  Serial.println(sim800l->getFirmware());
+
   // Wait for the GSM signal
   uint8_t signal = sim800l->getSignal();
   while(signal <= 0) {
