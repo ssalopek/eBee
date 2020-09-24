@@ -282,7 +282,7 @@ bool postSensor()
 
   bool postSuccess = false;
   // Do HTTP POST communication with 10s for the timeout (read and write)
-  uint16_t rc = sim800l->doPost(URL_Sensor, CONTENT_TYPE, PAYLOAD, 10000, 10000);
+  uint16_t rc = sim800l->doPost(URL_Sensor, CONTENT_TYPE, "", 10000, 10000);
   if(rc == 200) {
     // Success, output the data received on the serial
     Serial.print(F("HTTP POST successful ("));
