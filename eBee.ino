@@ -193,7 +193,7 @@ String postSensor()
   }while(success == 1);
   
   char response[58]; // očekujemo 58 charactera da dobijemo nazad od servera
-  result = http.post("https://iotebee.azurewebsites.net/api/Sensor", "", response);
+  result = http.post("https://iotebee.azurewebsites.net/api/Sensor", "{}", response);
   Serial.print(F("HTTP POST: "));
   Serial.println(result);
   if (result == SUCCESS)
@@ -211,7 +211,7 @@ String postSensor()
   }
   
   disconnectHttp(http);
-  return ""
+  return "";
   // 3. Read the Json response containing the SensorId and deserialize the json
   //const size_t capacity = JSON_OBJECT_SIZE(1) + 60;
   //DynamicJsonDocument doc(capacity);
