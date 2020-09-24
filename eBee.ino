@@ -193,8 +193,7 @@ String postSensor()
   }while(success == 1);
   
   char response[58]; // očekujemo 58 charactera da dobijemo nazad od servera
-  const char* body = "";
-  result = http.post("https://iotebee.azurewebsites.net/api/Sensor", body, response);
+  result = http.post("https://iotebee.azurewebsites.net/api/Sensor", "", response);
   Serial.print(F("HTTP POST: "));
   Serial.println(result);
   if (result == SUCCESS)
