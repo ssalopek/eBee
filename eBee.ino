@@ -148,6 +148,8 @@ float readWeight()
 
 // funkcije za GSM i komunikaciju s web servisom
 void setupModule() {
+  sim800l->reset();
+	
     // Wait until the module is ready to accept AT commands
   while(!sim800l->isReady()) {
     Serial.println(F("Problem to initialize AT command, retry in 1 sec"));
@@ -192,7 +194,7 @@ void setupModule() {
 
 bool connectGprs()
 {
-  // Go into low power mode
+  // Go into normal power mode
   bool normalPowerMode = sim800l->setPowerMode(NORMAL);
   if(normalPowerMode) {
     Serial.println(F("Module in normal power mode"));
@@ -213,7 +215,6 @@ bool connectGprs()
   } else {
     Serial.println(F("GPRS not connected !"));
     Serial.println(F("Reset the module."));
-    sim800l->reset();
     setupModule();
   }
   
