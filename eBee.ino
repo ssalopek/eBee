@@ -24,7 +24,6 @@ const char APN[] = "internet.ht.hr";
 const char URL_SensorData[] = "https://iotebee.azurewebsites.net/api/SensorData";
 const char URL_Sensor[] = "https://iotebee.azurewebsites.net/api/Sensor";
 const char CONTENT_TYPE[] = "application/json";
-//const char PAYLOAD[] = "{\"name\": \"morpheus\", \"job\": \"leader\"}"; --- ovo je kao 'body'
 
 // DHT sensor variables
 DHT dht(DHTPIN, DHTTYPE);
