@@ -134,7 +134,7 @@ float readWeight()
 HTTP connectHttp(int *success)
 {
   HTTP http(9600, RX_PIN, TX_PIN, RST_PIN);
-  result = http.connect(BEARER);
+  Result result = http.connect(BEARER);
   Serial.print(F("HTTP connect: "));
   Serial.println(result); // result bi trebo biti 0 što znači SUCCESS po njegovim Enumima
 	
@@ -168,7 +168,7 @@ void postSensorData(char* body)
   }while(success == 1);
   
   char response[58];
-  result = http.post("https://iotebee.azurewebsites.net/api/SensorData", body, response);
+  Result result = http.post("https://iotebee.azurewebsites.net/api/SensorData", body, response);
   Serial.print(F("HTTP POST: "));
   Serial.println(result);
   if (result == SUCCESS)
@@ -185,12 +185,21 @@ void postSensorData(char* body)
 // the Id should be displayed on the LCD screen
 String postSensor()
 {
-  	
+  Result result;
+  
   int success = 1;
   do
   {
   	HTTP http = connectHttp(&success);
   }while(success == 1);
+  
+  result = http.get("https://iotebee.azurewebsites.net/api/Sensor", response);
+  Serial.print(F("HTTP GET: "));
+  Serial.println(result);
+  if (result == SUCCESS)
+  {
+    Serial.println(response);
+  }
   
   char response[58]; // očekujemo 58 charactera da dobijemo nazad od servera
   result = http.post("https://iotebee.azurewebsites.net/api/Sensor", "{}", response);
