@@ -4,6 +4,8 @@
 Collect data on daily basis and send SMS message.
 Upload collected data to MySQL database.**
 
+### Check detailed documentation, block diagram, schematics and code explanaton [here](https://urn.nsk.hr/urn:nbn:hr:200:514755)
+
 ## Used technologies
 + Arduino microcontroller
 + Sensors:
@@ -12,4 +14,4 @@ Upload collected data to MySQL database.**
 + SIM800L GSM/GPRS module
 + RTC module (PCF85063A)
 
-### Check detailed documentation, block diagram, schematics and code explanaton [here](https://urn.nsk.hr/urn:nbn:hr:200:514755)
+
